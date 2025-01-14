@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leitor de QR Code de PDF</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsqr.min.js"></script>
+  </head>
+  <body>
+    <h1>Leitor de QR Code de PDF</h1>
+    <input type="file" id="file-input" accept="application/pdf" />
+    <button id="copy-button" style="display: none">
+      Copiar para área de transferência
+    </button>
+    <p id="output"></p>
+
+    <script>
+      document
+        .getElementById("file-input")
+        .addEventListener("change", async (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const arrayBuffer = await file.arrayBuffer();
+          const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+          const pages = pdfDoc.getPages();
+          let qrText = "";
+
+          for (const page of pages) {
+            const { width, height } = page.getSize();
+            const img = await page.getImage();
+            if (img) {
+              const imgData = img.getImageData();
+              const qrCodeData = jsQR(
+                imgData.data,
+                imgData.width,
+                imgData.height
+              );
+              if (qrCodeData) {
+                qrText = qrCodeData.data;
+                break; // Para de procurar após encontrar o primeiro QR Code
+              }
+            }
+          }
+
+          if (qrText) {
+            document.getElementById("output").innerText = qrText;
+            document.getElementById("copy-button").style.display = "block";
+          } else {
+            document.getElementById("output").innerText =
+              "QR Code não encontrado.";
+            document.getElementById("copy-button").style.display = "none";
+          }
+        });
+
+      document.getElementById("copy-button").addEventListener("click", () => {
+        const text = document.getElementById("output").innerText;
+        navigator.clipboard.writeText(text).then(() => {
+          alert("Texto copiado para a área de transferência!");
+        });
+      });
+    </script>
+  </body>
+</html>
